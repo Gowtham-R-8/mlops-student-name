@@ -1,8 +1,24 @@
-# Student Result Predictor
+# MLOps Student Predictor
 
-A Flask + scikit-learn demo app for the MLOps Practical Assessment. It accepts study hours, attendance percentage, and internal marks and predicts Pass/Fail.
+## Project structure
 
-## Run locally (Windows PowerShell)
+```text
+mlops-student-predictor/
+├── app.py
+├── train.py
+├── requirements.txt
+├── Dockerfile
+├── templates/
+│   └── index.html
+├── static/
+│   └── style.css
+└── deploy-scripts/
+    └── deploy.sh
+```
+
+`appspec.yml` is intentionally omitted for the no-CodeDeploy approach.
+
+## Run locally on Windows
 
 ```powershell
 py -m venv .venv
@@ -17,23 +33,32 @@ Open http://127.0.0.1:5000.
 ## Run with Docker
 
 ```bash
-docker build -t student-result-predictor .
-docker run --rm -p 5000:5000 student-result-predictor
+docker build -t mlops-student-predictor .
+docker run --rm -p 5000:5000 -e MODEL_VERSION=1.0 mlops-student-predictor
 ```
 
 Open http://localhost:5000.
 
-## EC2 deployment notes
+## EC2 deployment script
 
-- Allow inbound TCP port 80 in the EC2 security group.
-- Install Docker and the CodeDeploy agent on the EC2 instance.
-- Attach an IAM instance profile that permits CodeDeploy to manage deployments.
-- Create a CodeDeploy application and deployment group targeting the instance.
-- Create a CodePipeline source from GitHub and deployment stage to CodeDeploy (no Build stage required).
-- Make sure the EC2 instance has outbound access to fetch packages/images during Docker build.
+The script expects the project files to already be present on EC2 in `/opt/mlops-student-predictor`. It builds the image, replaces the running container, and publishes the app on port 80.
 
-Initially, the deployment script sets `MODEL_VERSION=1.0`. After the first successful deployment, change `MODEL_VERSION=1.0` to `MODEL_VERSION=2.0` in `scripts/deploy_container.sh`, commit and push the change, and verify that the pipeline deploys the updated page without logging in to EC2.
+```bash
+sudo mkdir -p /opt/mlops-student-predictor
+# Copy/checkout the repository into that directory, then:
+cd /opt/mlops-student-predictor
+chmod +x deploy-scripts/deploy.sh
+MODEL_VERSION=1.0 ./deploy-scripts/deploy.sh
+```
 
-## Important
+After the first deployment, set `MODEL_VERSION=2.0` to demonstrate the version change:
 
-The training data is synthetic and the prediction is for demonstration only. It is not an official academic result or a validated student assessment model.
+```bash
+MODEL_VERSION=2.0 ./deploy-scripts/deploy.sh
+```
+
+## Important: automatic deployment without appspec.yml
+
+Removing `appspec.yml` means this is not an AWS CodeDeploy deployment. A pipeline still needs a mechanism to run the script on EC2 (for example, AWS Systems Manager Run Command invoked by a pipeline stage, with the EC2 instance configured as a Systems Manager managed node and the required IAM permissions). A GitHub push alone will not execute this script automatically unless that trigger and remote execution stage are configured.
+
+The model is trained on synthetic demonstration data. Its predictions are not official academic results.

@@ -1,0 +1,16 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /opt/student-result-predictor
+    overwrite: true
+file_exists_behavior: OVERWRITE
+hooks:
+  BeforeInstall:
+    - location: scripts/stop_container.sh
+      timeout: 60
+      runas: root
+  AfterInstall:
+    - location: scripts/deploy_container.sh
+      timeout: 600
+      runas: root

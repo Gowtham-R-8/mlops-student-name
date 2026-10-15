@@ -19,15 +19,20 @@ sudo docker run -d \
   -e MODEL_VERSION=2.0 \
   student-app:latest
 
-echo "Checking application health..."
-for i in {1..15}; do
-  if curl -fsS http://127.0.0.1:8080/health; then
-    echo "Student Result Predictor is running."
+echo "Waiting for the health endpoint..."
+for i in {1..30}; do
+  if curl --connect-timeout 3 -fsS \
+    http://127.0.0.1:8080/health; then
+    echo
+    echo "Health check succeeded."
     exit 0
   fi
+
+  echo "Attempt $i failed; waiting for application startup..."
   sleep 2
 done
 
-echo "Health check failed."
-sudo docker logs student-app
+echo "Health check failed. Diagnostics:"
+sudo docker ps -a
+sudo docker logs --tail 100 student-app
 exit 1

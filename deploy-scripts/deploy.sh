@@ -3,37 +3,31 @@
 set -e
 
 APP_DIR="/home/ubuntu/mlops-student-name"
-
-echo "Starting Student Result Predictor deployment..."
-
-export DEBIAN_FRONTEND=noninteractive
-
-if ! command -v docker >/dev/null 2>&1; then
-    apt-get update -y
-    apt-get install -y docker.io
-fi
-
-systemctl enable --now docker
-
 cd "$APP_DIR"
 
-echo "Building Docker image..."
-docker build -t student-app .
+echo "Building Student Result Predictor image..."
+sudo docker build -t student-app:latest .
 
-echo "Removing previous container..."
-docker rm -f student-app 2>/dev/null || true
+echo "Removing previous Student Result Predictor container..."
+sudo docker rm -f student-app 2>/dev/null || true
 
-echo "Starting updated container..."
-docker run -d \
-    --name student-app \
-    --restart unless-stopped \
-    -p 80:5000 \
-    -e MODEL_VERSION=2.0 \
-    student-app
+echo "Starting Student Result Predictor on port 8080..."
+sudo docker run -d \
+  --name student-app \
+  --restart unless-stopped \
+  -p 8080:5000 \
+  -e MODEL_VERSION=2.0 \
+  student-app:latest
 
-sleep 3
+echo "Checking application health..."
+for i in {1..15}; do
+  if curl -fsS http://127.0.0.1:8080/health; then
+    echo "Student Result Predictor is running."
+    exit 0
+  fi
+  sleep 2
+done
 
-docker ps --filter "name=student-app"
-curl --fail http://127.0.0.1/health
-
-echo "Deployment successful."
+echo "Health check failed."
+sudo docker logs student-app
+exit 1

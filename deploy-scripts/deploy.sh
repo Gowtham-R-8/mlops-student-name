@@ -1,6 +1,6 @@
 
-#!/bin/bash
-set -e
+#!/bin/sh
+set -eu
 
 APP_DIR="/home/ubuntu/mlops-student-name"
 cd "$APP_DIR"
@@ -20,19 +20,28 @@ sudo docker run -d \
   student-app:latest
 
 echo "Waiting for the health endpoint..."
-for i in {1..30}; do
-  if curl --connect-timeout 3 -fsS \
-    http://127.0.0.1:8080/health; then
+i=1
+
+while [ "$i" -le 30 ]; do
+  echo "Health check attempt $i of 30"
+
+  if curl --connect-timeout 3 --max-time 5 -fsS \
+      http://127.0.0.1:8080/health; then
     echo
-    echo "Health check succeeded."
+    echo "SUCCESS: Student Result Predictor is healthy."
     exit 0
   fi
 
-  echo "Attempt $i failed; waiting for application startup..."
+  echo "Application is not ready yet. Waiting 2 seconds..."
   sleep 2
+  i=$((i + 1))
 done
 
-echo "Health check failed. Diagnostics:"
+echo "ERROR: Health check failed after 30 attempts."
+echo "Container status:"
 sudo docker ps -a
-sudo docker logs --tail 100 student-app
+
+echo "Container logs:"
+sudo docker logs --tail 100 student-app || true
+
 exit 1
